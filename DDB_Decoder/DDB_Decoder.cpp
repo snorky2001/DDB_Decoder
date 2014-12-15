@@ -5,7 +5,9 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <vector>
+
+#include "ControllerText.h"
+#include "DD.h"
 
 using namespace std;
 
@@ -14,7 +16,8 @@ unsigned short SelPtr=0;
 unsigned short TextPtr=0;
 unsigned short UnitPtr=0;
 
-vector<string> StdStringList;
+ControllerText StdTxt;
+DD deviceDriver;
 
 void SwapWord(unsigned short *val)
 {
@@ -64,61 +67,6 @@ void ProceedGeneralInformation(ifstream &file)
 	}
 }
 
-void LoadStdText(string StdTextFileName)
-{
-	string s;
-	char *tok;
-	char *line;
-	int index=0;
-
-	ifstream file(StdTextFileName.c_str() ,ios::in|ios::binary);
-	if (file.is_open())
-	{
-		getline(file,s);
-
-		while (getline(file, s))
-		{
-			//Ref
-			line = (char *)s.c_str();
-			tok = strtok(line,",");
-//			cout << "Index: " << index << endl;
-//			cout << tok;
-	
-			//Label
-			tok = strtok(NULL,",");
-			//Description
-			tok = strtok(NULL,",");
-			//Translate
-			tok = strtok(NULL,",");
-			//MaxChars
-			tok = strtok(NULL,",");
-			//English
-			tok = strtok(NULL,",");
-
-//			cout << ": " << tok << endl;
-			StdStringList.push_back(string(tok));
-		}
-		cout << "TextStd properly imported" << endl;
-
-	}
-	else
-	{
-		cout << "Fail to open the " << StdTextFileName << " file" << endl;
-	}
-}
-
-
-string GetStdText(unsigned int TextNumber)
-{
-	if (StdStringList.size() > TextNumber)
-	{
-		return	StdStringList[TextNumber];
-	}
-	else
-	{
-		return "UNKNOWN STRING";	
-	}
-}
 
 string GetText(ifstream &file, unsigned int TextNumber)
 {
@@ -132,7 +80,7 @@ string GetText(ifstream &file, unsigned int TextNumber)
 	}
 	else if (TextNumber > 0x8000)
 	{
-		string result = GetStdText(TextNumber-0x8000);
+		string result = StdTxt.GetStdText(TextNumber-0x8000);
 		result = _T("Controller: ") + result;
 		return result.c_str();
 	}
@@ -259,24 +207,32 @@ void ProceedUnitList(ifstream &file)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	string	filename = (char *)(argv[1]);
-  string StdTextFileName;
+	string	DDBFilename = (char *)(argv[1]);
+  string  StdTextFilename;
+
+  if (argc < 2)
+  {
+    cout << "Missing filename" << endl;
+    cout << "Syntax: " << argv[0] << " <DDB binary file> [<csv controller text file>]" << endl;
+    return 1;
+  }
+
+	DDBFilename = (char *)(argv[1]);
+
   if (argc > 2)
   {
-    StdTextFileName = (char *)(argv[2]);
+    StdTextFilename = (char *)(argv[2]);
   }
   else
   {
-    StdTextFileName = "TextStd.csv";
+    StdTextFilename = "TextStd.csv";
   }
 
-//	filename = "c:\\AmperoDrvr0_05_05_dd_.bin";
-//	filename = "c:\\SC9100_4_12_P12_DD_v0_03_03.bin";
-//  filename = "c:\\3798sc_4_10_P13_DD_V0_4_0.bin";
+  StdTxt.Init(StdTextFilename);
 
-	LoadStdText(StdTextFileName);
+  deviceDriver.Init(DDBFilename);
 
-	ifstream file(filename.c_str(),ios::in|ios::binary);
+	ifstream file(DDBFilename.c_str(),ios::in|ios::binary);
 	if (file.is_open())
 	{
     cout << "General informations" << endl;
